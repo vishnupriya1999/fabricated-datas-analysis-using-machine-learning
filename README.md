@@ -1,1 +1,2 @@
-# fabricated-datas-analysis-using-machine-learning
+ABSTRACT:
+Due to the importance of word choice in political discourse, this study explored the use of the term “fake news.” Using a social network analysis, content analysis, and cluster analysis, political characteristics of online networks that formed around discussions of “fake news” were examined. This study found that “fake news” is a politicized term where conversations overshadowed logical and important discussions of the term. Findings also revealed that social media users from opposing political parties communicate in homophilous environments and use “fake news” to disparage the opposition and condemn real information disseminated by the opposition party members.

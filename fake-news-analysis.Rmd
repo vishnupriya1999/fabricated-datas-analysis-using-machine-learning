@@ -1,0 +1,142 @@
+
+library(ggplot2)
+library(dplyr)
+library(tidytext)
+
+
+upload = read.csv("../input/fake.csv")
+
+da = upload %>% select(published, title, country, replies_count, likes, comments, shares, type)
+da$title = as.character(da$title)
+
+mytext = data_frame(text = da$title) %>% 
+  unnest_tokens(word, text) %>% 
+  group_by(word) %>% 
+  count(word, sort = TRUE) %>% mutate(len=nchar(word)) %>% filter(len>4)
+
+pl = ggplot(head(mytext,10), aes(x=reorder(word, -n),y=n)) + 
+  geom_col() + 
+  theme_light() + 
+  ylab("Number of posts") + 
+  xlab("Word") + 
+  ggtitle("Top words")
+pl
+
+In this part of reasearch i excluded "bs" type posts. *Data sources that were missing a label were simply assigned a label of "bs"*.
+
+da = da %>% mutate(Grupa = ifelse(grepl("Trump", da$title)==TRUE | grepl("Donald", da$title)==TRUE,"Trump",
+                                  ifelse(grepl("Hillary", da$title)==TRUE | grepl("Clinton", da$title)==TRUE,"Clinton",
+                                         ifelse(grepl("Barack", da$title)==TRUE | grepl("Obama", da$title)==TRUE,"Obama",
+                                                ifelse(grepl("Vladimir", da$title)==TRUE | grepl("Putin", da$title)==TRUE,"Putin",
+                                                              ifelse(grepl("Russia", da$title)==TRUE,"Russia",0))))))
+
+dafin = da %>% filter(Grupa == 'Clinton' | Grupa == 'Trump' | Grupa == 'Obama' | Grupa == 'Putin' | Grupa == 'Russia') %>% 
+  group_by(type,Grupa) %>% count(Grupa) %>% filter(type!='bs')
+
+plota = ggplot(dafin, aes(x=reorder(type, n), y=n, fill = Grupa)) + 
+  geom_col() + 
+  facet_wrap(~Grupa, ncol = 2, scales = "free") + 
+  theme_light() + 
+  ylab("Number of posts") + 
+  xlab("Type of post") + 
+  coord_flip()
+plota
+
+Only Trump and Clinton have satisfactory number of records to analyse. Therefore i decided to focus only on two groups of entry: Trump and Clinton groups. 
+
+dafinal = da %>% filter(Grupa == 'Clinton' | Grupa == 'Trump') %>% 
+  group_by(type,Grupa) %>% count(Grupa) %>% filter(type!='bs')
+
+pl2 = ggplot(dafinal, aes(x=reorder(type, n), y=n, fill = Grupa)) + 
+  geom_col() + 
+  facet_wrap(~Grupa, ncol = 2, scales = "free") + 
+  theme_light() + 
+  ylab("Number of posts") + 
+  xlab("Type of post") + 
+  coord_flip()
+  
+pl2
+entage of posts split by type.
+
+pl3 = dafinal %>% mutate(Share = n/sum(dafinal$n)) %>% ungroup() %>% 
+  mutate(type=reorder(type,Share)) %>% 
+  ggplot(aes(type, Share, fill= Grupa)) + 
+  geom_col() + 
+  theme_light() + 
+  facet_wrap(~Grupa, ncol = 2) + 
+  xlab("Type of posts") + 
+  coord_flip()
+pl3
+
+
+
+pl4 = da %>% select(Grupa, type, likes, comments) %>% filter(Grupa=="Trump" | Grupa=="Clinton") %>% group_by(Grupa, type) %>% 
+  summarise(Likes=sum(likes)) %>% filter(type!='bs') %>%
+  ggplot(aes(reorder(type, Likes), Likes, fill = Grupa)) +
+  geom_col() + 
+  facet_wrap(~Grupa, ncol = 2, scales = "free") + 
+  xlab("Type of posts") + 
+  coord_flip()
+
+pl4
+
+Most frequent words for Clinton and Trump group.
+
+clinwords = da %>% filter(Grupa=="Clinton") %>% select(type, title) 
+clinwords = data_frame(type = clinwords$type, text = clinwords$title) %>% unnest_tokens(word, text) 
+clinwords = clinwords %>% count(type, word, sort = TRUE) %>% mutate(len=nchar(word)) %>% filter(len>4) 
+clinwords$check = ifelse(grepl("hillary", clinwords$word)==TRUE | grepl("clinton", clinwords$word)==TRUE,1,0)
+clinwords = clinwords %>% filter(check==0 & type!='bs') %>% group_by_(~ type) %>%
+  do(head(., n = 10))
+  
+pl5 = ggplot(clinwords, aes(x=reorder(word,n), y=n, fill = type)) + geom_col() + 
+  facet_wrap(~type,ncol = 3, scales = "free") + 
+  theme_light() +
+  ylab("Number of posts") + 
+  xlab("Word") + 
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+pl5
+
+trumpwords = da %>% filter(Grupa=="Trump") %>% select(type, title) 
+trumpwords = data_frame(type = trumpwords$type, text = trumpwords$title) %>% unnest_tokens(word, text) 
+trumpwords = trumpwords %>% count(type, word, sort = TRUE) %>% mutate(len=nchar(word)) %>% filter(len>4) 
+trumpwords$check = ifelse(grepl("donald", trumpwords$word)==TRUE | grepl("trump", trumpwords$word)==TRUE,1,0)
+trumpwords = trumpwords %>% filter(check==0 & type!='bs') %>% group_by_(~ type) %>%
+  do(head(., n = 10))
+
+pl6 = ggplot(trumpwords, aes(x=reorder(word,n), y=n, fill = type)) + geom_col() + 
+  facet_wrap(~type,ncol = 3, scales = "free") + 
+  theme_light() +
+  ylab("Number of posts") + 
+  xlab("Word") +
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+pl6
+
+
+trumpbs = da %>% filter(Grupa=="Trump") %>% select(type, title) 
+trumpbs = data_frame(type = trumpbs$type, text = trumpbs$title) %>% unnest_tokens(word, text)
+trumpbs = trumpbs %>% count(type, word, sort = TRUE) %>% mutate(len=nchar(word)) %>% filter(len>4) 
+trumpbs$check = ifelse(grepl("donald", trumpbs$word)==TRUE | grepl("trump", trumpbs$word)==TRUE,1,0)
+trumpbs = trumpbs %>% filter(check==0 & type=='bs') %>% head(15)
+
+pl7 = ggplot(trumpbs, aes(x=reorder(word,-n),y=n)) + geom_col() +
+  theme_light() +
+  ylab("Number of posts") + 
+  xlab("Word") + 
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+pl7    
+
+
+hilbs = da %>% filter(Grupa=="Clinton") %>% select(type, title) 
+hilbs = data_frame(type = hilbs$type, text = hilbs$title) %>% unnest_tokens(word, text)
+hilbs = hilbs %>% count(type, word, sort = TRUE) %>% mutate(len=nchar(word)) %>% filter(len>4) 
+hilbs$check = ifelse(grepl("clinton", hilbs$word)==TRUE | grepl("hillary", hilbs$word)==TRUE,1,0)
+hilbs = hilbs %>% filter(check==0 & type=='bs') %>% head(15)
+
+pl8 = ggplot(hilbs, aes(x=reorder(word,-n),y=n)) + geom_col() +
+  theme_light() +
+  ylab("Number of posts") + 
+  xlab("Word") + 
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+pl8   
+
